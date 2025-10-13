@@ -3,421 +3,345 @@
 一个强大的网页数据提取规则解析引擎，支持多种选择器类型和高级数据处理功能。
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-199%20cases-brightgreen.svg)](#测试报告)
+[![Tests](https://img.shields.io/badge/Tests-199%20cases-brightgreen.svg)](测试报告.md)
+[![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue.svg)](LICENSE)
 
-## 🚀 特性
+## ⚡ 5分钟快速入门
 
-- **多种选择器支持**: CSS、XPath、JSON、正则表达式、JavaScript、文本选择器
-- **强大的操作符**: 字段拼接(`&&`)、回退机制(`||`)、正则净化(`##`)
-- **智能数据处理**: 自动类型转换、空值处理、错误恢复
-- **高性能解析**: 优化的规则引擎，支持复杂嵌套规则
-- **完整测试覆盖**: 199个测试用例，覆盖各种使用场景
+```javascript
+import { RuleEngine } from 'book-source-rule-parser';
+const engine = new RuleEngine();
+
+// 📝 示例1: 提取网页标题
+const html = '<div class="book"><h1>JavaScript权威指南</h1><p class="author">David Flanagan</p></div>';
+const title = await engine.parse(html, '@css:h1@text');
+console.log(title.data); // "JavaScript权威指南"
+
+// 🛡️ 示例2: 带回退的安全提取
+const safeTitle = await engine.parse(html, '@css:.title@text || @text:未知标题');
+console.log(safeTitle.data); // "未知标题"
+
+// 🎨 示例3: 格式化输出
+const bookInfo = await engine.parse(html, 
+  '@text:《 && @css:h1@text && @text:》作者： && @css:.author@text'
+);
+console.log(bookInfo.data); // "《JavaScript权威指南》作者：David Flanagan"
+
+// 📊 示例4: JSON数据提取
+const json = '{"book":{"title":"Python编程","price":89}}';
+const price = await engine.parse(json, '@json:$.book.price');
+console.log(price.data); // 89
+
+// 🔢 示例5: 正则提取数字
+const text = '价格：￥128.50元';
+const number = await engine.parse(text, '@regex:\\d+\\.\\d+');
+console.log(number.data); // "128.50"
+```
+
+**💡 更多示例**: [examples/](examples/) | **📖 完整文档**: [DOCS_NAVIGATION.md](DOCS_NAVIGATION.md) | **🤖 AI辅助**: [LLM_PROMPT.md](LLM_PROMPT.md)
 
 ## 📦 安装
 
 ```bash
-npm install book-source-rule-parser
+pnpm install book-source-rule-parser
 ```
 
-## 🎯 快速开始
+## 🎯 核心特性
 
+| 特性 | 说明 |
+|------|------|
+| 🎨 **6种选择器** | CSS、XPath、JSON、正则、JS、文本 |
+| 🔧 **3种操作符** | 拼接(`&&`)、回退(`\|\|`)、净化(`##`) |
+| 🛡️ **容错机制** | 自动回退、空值处理、错误恢复 |
+| ⚡ **高性能** | <1ms单次解析、1000次/秒批量处理 |
+| ✅ **测试覆盖** | 199个测试用例、100%通过率 |
+
+## 📖 选择器速查表
+
+### CSS选择器 `@css:`
 ```javascript
-import { RuleEngine } from 'book-source-rule-parser';
-
-const engine = new RuleEngine();
-const html = '<div class="book"><h1>JavaScript权威指南</h1></div>';
-
-// 基础CSS选择器
-const result = await engine.parse(html, '@css:.book h1@text');
-console.log(result.data); // "JavaScript权威指南"
-
-// 带回退的规则
-const fallbackResult = await engine.parse(html, '@css:.title@text || @text:默认标题');
-console.log(fallbackResult.data); // "默认标题"
-
-// 字段拼接
-const concatResult = await engine.parse(html, '@text:书名： && @css:.book h1@text');
-console.log(concatResult.data); // "书名：JavaScript权威指南"
+'@css:.title@text'              // 提取文本
+'@css:img@src'                  // 提取图片链接
+'@css:a@href'                   // 提取超链接
+'@css:.price@text##\\d+\\.\\d+' // 提取+正则净化
 ```
 
-## 📖 支持的选择器类型
-
-### 1. CSS 选择器 (`@css:`)
-
-提取HTML元素的文本内容或属性值。
-
+### JSON选择器 `@json:`
 ```javascript
-// 基础用法
-'@css:.title@text'           // 获取.title元素的文本
-'@css:.book@attr:data-id'    // 获取.book元素的data-id属性
-'@css:img@src'               // 获取img元素的src属性
-
-// 高级用法
-'@css:.book h1@text'         // 选择.book下的h1元素
-'@css:div:nth-child(2)@text' // 选择第二个div元素
+'@json:$.book.title'            // JSONPath语法
+'@json:books[0].author'         // 数组访问
+'@json:$.items[*].name'         // 提取所有
 ```
 
-### 2. XPath 选择器 (`@xpath:`)
-
-使用XPath表达式进行精确的元素定位。
-
+### 正则选择器 `@regex:`
 ```javascript
-'@xpath://h1[@class="title"]/text()'     // XPath文本提取
-'@xpath://div[@id="content"]/@data-id'   // XPath属性提取
-'@xpath://book[position()=1]/title'      // 位置选择
+'@regex:\\d+\\.\\d+'            // 提取数字
+'@regex:ISBN:([\\d-]+)'         // 分组提取
 ```
 
-### 3. JSON 选择器 (`@json:`)
-
-从JSON数据中提取特定字段。
-
+### 操作符组合
 ```javascript
-'@json:$.book.title'         // JSONPath语法
-'@json:book.author.name'     // 对象路径访问
-'@json:books[0].title'       // 数组元素访问
-'@json:$.books[*].title'     // 数组所有元素
-```
-
-### 4. 正则表达式选择器 (`@regex:`)
-
-使用正则表达式进行模式匹配。
-
-```javascript
-'@regex:price:\d+\.?\d*'     // 提取价格数字
-'@regex:ISBN:\d{13}'         // 提取13位ISBN
-'@regex:作者：([^\\s]+)'      // 提取作者名称
-```
-
-### 5. JavaScript 选择器 (`@js:`)
-
-执行自定义JavaScript代码进行复杂数据处理。
-
-```javascript
-'@js:document.title.toUpperCase()'        // 转换为大写
-'@js:Array.from(document.querySelectorAll(".item")).length'  // 统计元素数量
-'@js:window.location.href'                // 获取当前URL
-```
-
-### 6. 文本选择器 (`@text:`) ⭐ 新功能
-
-直接输出指定的文本内容，常用作默认值或固定文本。
-
-```javascript
-'@text:默认标题'              // 输出固定文本
-'@text: - '                  // 输出分隔符（保留空格）
-'@text:"包含特殊字符的文本"'   // 带引号的文本
-'@text:数字123'              // 混合内容
-```
-
-## 🔧 操作符详解
-
-### 拼接操作符 (`&&`)
-
-将多个选择器的结果连接成一个字符串。
-
-```javascript
-// 基础拼接
+// 拼接 &&
 '@css:.title@text && @text:（完整版）'
-// 输出: "JavaScript权威指南（完整版）"
 
-// 复杂拼接（注意空格的严格要求）
-'@text:书名： && @css:.title@text && @text: | 作者： && @css:.author@text'
-// 输出: "书名：JavaScript权威指南 | 作者：Douglas Crockford"
+// 回退 ||  
+'@css:.title@text || @text:未知'
 
-// 空格处理规则
-'@text:前缀 && @text:后缀'     // ✅ 正确：标准格式
-'@text:前缀  && @text:后缀'    // ✅ 正确：左侧多空格归属段落
-'@text:前缀 &&  @text:后缀'    // ✅ 正确：右侧多空格归属段落
-'@text:前缀&&@text:后缀'       // ❌ 错误：缺少空格
-'@text:前缀  &&  @text:后缀'   // ❌ 错误：两侧都是多空格
+// 净化 ##
+'@css:.price@text##\\d+\\.\\d+'
+
+// 组合使用
+'(@css:.title@text || @text:默认) && @text: - && @css:.author@text'
 ```
 
-### 回退操作符 (`||`)
+## 💼 实战案例
 
-当前面的选择器失败时，尝试后续的选择器。
-
-```javascript
-// 基础回退
-'@css:.title@text || @text:未知标题'
-// 如果.title不存在，输出"未知标题"
-
-// 多级回退
-'@css:.primary-title@text || @css:.secondary-title@text || @text:默认标题'
-// 依次尝试多个选择器
-
-// 与拼接组合
-'@css:.title@text || @text:默认标题 && @text:（推荐）'
-// 先回退，再拼接
-```
-
-### 正则净化操作符 (`##`)
-
-对选择器结果进行正则表达式处理。
+### 案例1: 电商商品信息提取
 
 ```javascript
-// 移除HTML标签
-'@css:.content@text##<[^>]*>'
-
-// 提取数字
-'@css:.price@text##\\d+\\.?\\d*'
-
-// 替换文本
-'@css:.title@text##旧文本:新文本'
-
-// 多重净化
-'@css:.content@text##<[^>]*>##\\s+'
-// 先移除HTML标签，再压缩空白字符
-```
-
-## 🏗️ 高级用法
-
-### 嵌套规则
-
-```javascript
-// 条件拼接
-'(@css:.premium@text && @text:[VIP]) || @text:[普通] && @css:.title@text'
-
-// 复杂数据提取
-'@text:《 && (@css:.title@text || @text:未知书名) && @text:》 - && (@css:.author@text || @text:佚名)'
-```
-
-### 属性提取
-
-```javascript
-// HTML属性
-'@css:img@src'              // 图片链接
-'@css:a@href'               // 超链接地址
-'@css:div@attr:data-id'     // 自定义属性
-
-// 特殊属性
-'@css:input@value'          // 表单值
-'@css:meta@content'         // Meta标签内容
-```
-
-### 数组和对象处理
-
-```javascript
-// JSON数组
-'@json:books[0].title'      // 第一本书标题
-'@json:$.books[*].title'    // 所有书籍标题
-'@json:author.books.length' // 书籍数量
-
-// 复杂对象
-'@json:$.data.items[?(@.type=="book")].title'  // 过滤特定类型
-```
-
-## 📊 测试报告
-
-项目包含 **199个测试用例**，覆盖以下功能：
-
-| 选择器类型 | 测试用例数 | 通过率 | 覆盖功能 |
-|------------|------------|--------|----------|
-| CSS选择器 | 45 | 100% | 元素选择、属性提取、文本获取 |
-| XPath选择器 | 25 | 100% | 路径表达式、属性访问、条件筛选 |
-| JSON选择器 | 30 | 100% | JSONPath、对象访问、数组处理 |
-| 正则选择器 | 20 | 100% | 模式匹配、分组提取、替换操作 |
-| JavaScript选择器 | 15 | 100% | 自定义逻辑、DOM操作、数据转换 |
-| Text选择器 | 33 | 100% | 文本输出、空格处理、引号文本 |
-| 拼接操作符 | 18 | 100% | 字符串连接、空格规则、错误处理 |
-| 回退操作符 | 8 | 100% | 失败恢复、多级回退、条件选择 |
-| 正则净化 | 5 | 100% | 文本清理、格式化、内容提取 |
-
-### 性能测试
-
-- **单次解析**: < 1ms
-- **批量处理**: 1000次/秒
-- **内存占用**: < 10MB
-- **并发支持**: 是
-
-## 🔍 实际应用示例
-
-### 电商网站数据提取
-
-```javascript
-// 商品信息提取
-const productRule = `
-  @text:【 && 
-  (@css:.category@text || @text:未分类) && 
-  @text:】 && 
-  (@css:.title@text || @text:商品名称) && 
-  @text: - ￥ && 
-  (@css:.price@text##[￥¥]?([0-9.]+) || @text:价格面议)
+const productHTML = `
+  <div class="product">
+    <h1 class="title">iPhone 15 Pro Max</h1>
+    <span class="price">￥9999</span>
+    <span class="category">手机</span>
+    <img src="https://example.com/iphone.jpg" class="cover">
+  </div>
 `;
 
-// 结果: "【图书】JavaScript权威指南 - ￥89.00"
+// 提取商品卡片
+const rule = '@text:【 && @css:.category@text && @text:】 && @css:.title@text && @text: - ￥ && @css:.price@text##\\d+';
+const result = await engine.parse(productHTML, rule);
+console.log(result.data); 
+// "【手机】iPhone 15 Pro Max - ￥9999"
 ```
 
-### 新闻网站标题提取
+### 案例2: 小说章节信息
 
 ```javascript
-// 多层回退确保获取标题
-const newsTitle = `
-  @css:h1.main-title@text || 
-  @css:.article-title@text || 
-  @css:title@text || 
-  @text:无标题新闻
-`;
-```
-
-### 社交媒体内容解析
-
-```javascript
-// 用户动态信息
-const socialPost = `
-  @css:.username@text && 
-  @text: 发布了: && 
-  (@css:.content@text##<[^>]*> || @text:内容已删除) && 
-  @text: (点赞: && 
-  (@css:.likes@text || @text:0) && 
-  @text:次)
-`;
-```
-
-### 图书信息格式化
-
-```javascript
-// 完整书籍信息
-const bookInfo = `
-  @text:《 && 
-  @css:.title@text && 
-  @text:》 - && 
-  @css:.author@text && 
-  @text: | 状态： && 
-  (@css:.status@text || @text:在售)
+const novelHTML = `
+  <div class="chapter">
+    <h2 class="title">第1章：开端</h2>
+    <span class="time">2024-10-12</span>
+    <div class="content">故事从这里开始...</div>
+  </div>
 `;
 
-// 结果: "《JavaScript高级程序设计》 - Nicholas C. Zakas | 状态：在售"
+// 提取章节信息
+const chapterInfo = await engine.parse(novelHTML,
+  '@css:.title@text && @text: (更新于 && @css:.time@text && @text:)'
+);
+console.log(chapterInfo.data);
+// "第1章：开端 (更新于 2024-10-12)"
 ```
 
-## 🛠️ API 参考
-
-### RuleEngine
-
-主要的规则解析引擎类。
+### 案例3: JSON API数据
 
 ```javascript
-const engine = new RuleEngine(options);
+const apiResponse = {
+  "code": 200,
+  "data": {
+    "books": [
+      {"title": "JavaScript高级程序设计", "price": 99, "author": "Nicholas"},
+      {"title": "深入理解计算机系统", "price": 139, "author": "Bryant"}
+    ]
+  }
+};
+
+// 提取第一本书
+const book1 = await engine.parse(JSON.stringify(apiResponse),
+  '@json:$.data.books[0].title && @text: - && @json:$.data.books[0].author && @text: - ￥ && @json:$.data.books[0].price'
+);
+console.log(book1.data);
+// "JavaScript高级程序设计 - Nicholas - ￥99"
+
+// 提取所有书名
+const titles = await engine.parse(JSON.stringify(apiResponse),
+  '@json:$.data.books[*].title'
+);
+console.log(titles.data);
+// ["JavaScript高级程序设计", "深入理解计算机系统"]
 ```
 
-#### 选项
+### 案例4: 容错处理
 
 ```javascript
-{
-  timeout: 5000,        // 解析超时时间（毫秒）
+const html = '<div class="book"><p class="desc">一本好书</p></div>';
+
+// 多级回退确保有值返回
+const rule = `
+  @css:.title@text ||
+  @css:.name@text ||
+  @css:.desc@text ||
+  @text:未知书籍
+`;
+
+const result = await engine.parse(html, rule);
+console.log(result.data); // "一本好书" (前两个不存在，使用第三个)
+```
+
+## 🚀 运行示例
+
+项目提供了4个实战示例文件：
+
+```bash
+# 基础用法（推荐先看）
+pnpm run example:basic
+
+# 电商网站数据提取
+pnpm run example:ecommerce
+
+# 小说网站章节提取
+pnpm run example:novel
+
+# JSON API数据提取
+pnpm run example:json
+
+# 运行所有示例
+pnpm run examples
+```
+
+示例文件位置：
+- [examples/basic-usage.js](examples/basic-usage.js) - 基础用法
+- [examples/ecommerce-example.js](examples/ecommerce-example.js) - 电商案例  
+- [examples/novel-example.js](examples/novel-example.js) - 小说案例
+- [examples/json-example.js](examples/json-example.js) - JSON案例
+
+## 🤖 AI辅助编写规则
+
+将以下提示词提供给 ChatGPT/Claude 等AI助手，让它帮你编写规则：
+
+```
+请阅读以下规则语法，帮我编写数据提取规则：
+[复制 LLM_PROMPT.md 的内容]
+
+我需要从以下网页提取数据：
+[粘贴你的HTML或描述需求]
+```
+
+AI文档：
+- **[LLM_PROMPT.md](LLM_PROMPT.md)** - 精简版（推荐给AI）
+- **[AI_PROMPT_SIMPLE.md](AI_PROMPT_SIMPLE.md)** - 简化版（快速参考）
+- **[AI_RULE_WRITING_GUIDE.md](AI_RULE_WRITING_GUIDE.md)** - 详细版（深入学习）
+
+## 📚 文档索引
+
+| 文档 | 说明 | 适用场景 |
+|------|------|----------|
+| [DOCS_NAVIGATION.md](DOCS_NAVIGATION.md) | 📂 文档导航 | 快速找到所需文档 |
+| [examples/README.md](examples/README.md) | 📝 示例说明 | 学习示例代码 |
+| [测试报告.md](测试报告.md) | ✅ 测试报告 | 了解测试覆盖 |
+| [CHANGELOG.md](CHANGELOG.md) | 📋 更新日志 | 查看版本历史 |
+
+## 🔧 API参考
+
+### 创建引擎
+
+```javascript
+const engine = new RuleEngine({
+  timeout: 5000,        // 解析超时(ms)
   maxDepth: 10,         // 最大嵌套深度
-  enableCache: true,    // 启用结果缓存
-  strictMode: false     // 严格模式（更严格的错误处理）
-}
+  enableCache: true,    // 启用缓存
+  strictMode: false     // 严格模式
+});
 ```
 
-#### 方法
+### 解析方法
 
 ```javascript
-// 解析规则
-async parse(source, rule, context = {})
+// 单个规则解析
+const result = await engine.parse(source, rule, context);
 
 // 批量解析
-async parseBatch(source, rules, context = {})
-
-// 验证规则语法
-validateRule(rule)
-
-// 清除缓存
-clearCache()
+const results = await engine.parseBatch(source, {
+  title: '@css:.title@text',
+  author: '@css:.author@text',
+  price: '@css:.price@text##\\d+'
+});
 ```
 
-### 解析结果
+### 返回结果
 
 ```javascript
 {
-  success: boolean,     // 是否成功
-  data: any,           // 提取的数据
-  rule: string,        // 原始规则
-  selector: string,    // 选择器类型
-  errors?: Array,      // 错误信息（可选）
-  processedCount?: number // 处理的元素数量（可选）
+  success: boolean,      // 是否成功
+  data: any,            // 提取的数据
+  rule: string,         // 使用的规则
+  selector: string,     // 选择器类型
+  errors?: Array        // 错误信息(可选)
 }
 ```
 
-## 🐛 常见问题
+## ❓ 常见问题
 
-### Q: 拼接操作符的空格规则是什么？
+<details>
+<summary><b>Q: 拼接操作符 && 的空格要求？</b></summary>
 
-A: 拼接操作符 `&&` 必须严格使用单个空格包裹（` && `）：
+A: 必须用单空格包围：`selector1 && selector2`（正确）
+
+- ❌ `selector1&&selector2` - 缺少空格
 - ✅ `selector1 && selector2` - 正确
-- ❌ `selector1&&selector2` - 错误（缺少空格）
-- ❌ `selector1  &&  selector2` - 错误（两侧都是多空格）
-- ✅ `selector1  && selector2` - 正确（仅左侧多空格）
+- ✅ `selector1  && selector2` - 左侧多空格也可以
 
-### Q: 如何保留 @text 选择器中的空格？
+</details>
 
-A: @text 选择器会自动保留有意义的尾部空格：
+<details>
+<summary><b>Q: 如何保留 @text 选择器中的空格？</b></summary>
+
+A: @text 会自动保留尾部有意义的空格：
 ```javascript
-'@text: - '    // 输出 " - "（保留两端空格）
-'@text:-'      // 输出 "-"
+'@text: - '  // 输出 " - " (保留空格)
+'@text:-'    // 输出 "-"
 ```
+</details>
 
-### Q: XPath 选择器不工作怎么办？
+<details>
+<summary><b>Q: 如何调试复杂规则？</b></summary>
 
-A: 确保：
-1. XPath语法正确
-2. 目标元素存在
-3. 使用正确的XPath函数（如 `text()`, `@attr`）
-
-### Q: 如何调试复杂规则？
-
-A: 建议分步测试：
+A: 分步测试：
 1. 先测试每个单独的选择器
 2. 再测试操作符组合
-3. 使用日志输出中间结果
+3. 使用console.log输出中间结果
+4. 参考[examples/](examples/)中的案例
+</details>
 
-## 🤝 贡献指南
+<details>
+<summary><b>Q: 正则表达式为什么要双反斜杠？</b></summary>
 
-欢迎提交 Pull Request 和 Issue！
+A: JavaScript字符串需要转义：
+- ❌ `@regex:\d+\.` - 错误
+- ✅ `@regex:\\d+\\.` - 正确
+</details>
 
-### 开发环境设置
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-username/book-source-rule-parser.git
-
-# 安装依赖
-npm install
+# 开发环境设置
+git clone https://github.com/LegadoTeam/legado-rule.git
+cd legado-rule
+pnpm install
 
 # 运行测试
-npm test
+pnpm test
 
-# 启动开发模式
-npm run dev
-```
+# 测试覆盖率
+pnpm run coverage
 
-### 测试
-
-```bash
-# 运行所有测试
-npm test
-
-# 运行特定测试文件
-npm test -- test/selectors/css.test.js
-
-# 运行测试覆盖率
-npm run test:coverage
-
-# 启动测试UI界面
-npm run test:ui
+# 运行示例
+pnpm run examples
 ```
 
 ## 📄 许可证
 
-PolyForm Noncommercial License - 详见 [LICENSE](LICENSE) 文件
+[PolyForm Noncommercial License](LICENSE) - 仅供非商业使用
 
 ## 🙏 致谢
 
 感谢所有贡献者和用户的支持！
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=legadoteam/legado-rule&type=Date)](https://www.star-history.com/#legadoteam/legado-rule&Date)
 ---
 
-**Star ⭐ 这个项目如果它对你有帮助！**
+**⭐ 如果这个项目对你有帮助，请给我们一个 Star！**
+
+[![Star History](https://api.star-history.com/svg?repos=LegadoTeam/legado-rule&type=Date)](https://star-history.com/#LegadoTeam/legado-rule&Date)

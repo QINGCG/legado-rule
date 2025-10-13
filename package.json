@@ -11,7 +11,12 @@
     "coverage": "vitest run --coverage",
     "build": "node build.js",
     "dev": "node --watch index.js",
-    "lint": "eslint src/ --fix"
+    "lint": "eslint src/ --fix",
+    "examples": "node examples/run-all.js",
+    "example:basic": "node examples/basic-usage.js",
+    "example:ecommerce": "node examples/ecommerce-example.js",
+    "example:novel": "node examples/novel-example.js",
+    "example:json": "node examples/json-example.js"
   },
   "keywords": [
     "book-source",
